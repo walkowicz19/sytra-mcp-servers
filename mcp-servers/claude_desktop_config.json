@@ -1,0 +1,60 @@
+{
+  "mcpServers": {
+    "stark-security": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/security-guardrails/build/index.js"],
+      "env": {
+        "SECURITY_API_URL": "http://localhost:8001"
+      }
+    },
+    "stark-codegen": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/code-generation/build/index.js"],
+      "env": {
+        "CODEGEN_API_URL": "http://localhost:8002"
+      }
+    },
+    "stark-memory": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/memory-management/build/index.js"],
+      "env": {
+        "MEMORY_API_URL": "http://localhost:8003"
+      }
+    },
+    "stark-intelligence": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/intelligence-amplification/build/index.js"],
+      "env": {
+        "INTELLIGENCE_API_URL": "http://localhost:8004"
+      }
+    },
+    "stark-tokens": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/token-optimization/build/index.js"],
+      "env": {
+        "TOKEN_API_URL": "http://localhost:8005"
+      }
+    },
+    "stark-sdlc": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/sdlc-integration/build/index.js"],
+      "env": {
+        "SDLC_API_URL": "http://localhost:8006"
+      }
+    },
+    "stark-legacy": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/legacy-support/build/index.js"],
+      "env": {
+        "LEGACY_API_URL": "http://localhost:8007"
+      }
+    },
+    "stark-performance": {
+      "command": "node",
+      "args": ["C:/Users/MatheusNeryWalkowicz/Documents/Automation/stark-mcp/mcp-servers/performance-optimizer/build/index.js"],
+      "env": {
+        "PERFORMANCE_API_URL": "http://localhost:8009"
+      }
+    }
+  }
+}

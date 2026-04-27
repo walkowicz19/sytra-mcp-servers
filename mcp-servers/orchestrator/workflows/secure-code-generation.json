@@ -1,0 +1,107 @@
+{
+  "id": "secure-code-generation",
+  "name": "Secure Code Generation",
+  "description": "Generate code with security validation and optimization",
+  "version": "1.0.0",
+  "metadata": {
+    "category": "development",
+    "tags": ["security", "code-generation", "validation"],
+    "author": "Stark Team",
+    "estimatedDuration": "5-10 minutes"
+  },
+  "steps": [
+    {
+      "id": "classify-requirements",
+      "service": "security",
+      "tool": "classify_data",
+      "inputs": {
+        "content": "{{requirements}}"
+      },
+      "outputs": ["classification"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "generate-code",
+      "service": "codegen",
+      "tool": "generate_code",
+      "inputs": {
+        "requirements": "{{requirements}}",
+        "language": "{{language}}",
+        "framework": "{{framework}}"
+      },
+      "outputs": ["code"],
+      "dependsOn": ["classify-requirements"],
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "backoffMs": 2000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "security-scan",
+      "service": "security",
+      "tool": "scan_code",
+      "inputs": {
+        "code": "{{generate-code.code}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["vulnerabilities", "score"],
+      "dependsOn": ["generate-code"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "optimize-tokens",
+      "service": "tokens",
+      "tool": "optimize_context",
+      "inputs": {
+        "content": "{{generate-code.code}}",
+        "maxTokens": 4000
+      },
+      "outputs": ["optimizedContent"],
+      "dependsOn": ["security-scan"],
+      "condition": "{{security-scan.score}} >= 80"
+    },
+    {
+      "id": "generate-tests",
+      "service": "sdlc",
+      "tool": "generate_tests",
+      "inputs": {
+        "code": "{{generate-code.code}}",
+        "language": "{{language}}",
+        "framework": "{{testFramework}}"
+      },
+      "outputs": ["tests"],
+      "dependsOn": ["optimize-tokens"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1500,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "generate-documentation",
+      "service": "sdlc",
+      "tool": "generate_documentation",
+      "inputs": {
+        "code": "{{generate-code.code}}",
+        "language": "{{language}}",
+        "format": "markdown"
+      },
+      "outputs": ["documentation"],
+      "dependsOn": ["generate-tests"]
+    }
+  ],
+  "errorHandling": {
+    "onStepFailure": "stop",
+    "notifyOnError": true
+  },
+  "timeout": 600000
+}

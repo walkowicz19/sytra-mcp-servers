@@ -1,0 +1,180 @@
+{
+  "id": "full-sdlc-cycle",
+  "name": "Complete SDLC Cycle",
+  "description": "End-to-end software development lifecycle from requirements to deployment",
+  "version": "1.0.0",
+  "metadata": {
+    "category": "development",
+    "tags": ["sdlc", "full-cycle", "development", "deployment"],
+    "author": "Stark Team",
+    "estimatedDuration": "15-30 minutes"
+  },
+  "steps": [
+    {
+      "id": "analyze-requirements",
+      "service": "sdlc",
+      "tool": "analyze_requirements",
+      "inputs": {
+        "requirements": "{{requirements}}"
+      },
+      "outputs": ["analysis"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "decompose-tasks",
+      "service": "intelligence",
+      "tool": "decompose_task",
+      "inputs": {
+        "task": "{{requirements}}",
+        "context": "{{analyze-requirements.analysis}}"
+      },
+      "outputs": ["subtasks"],
+      "dependsOn": ["analyze-requirements"]
+    },
+    {
+      "id": "suggest-patterns",
+      "service": "sdlc",
+      "tool": "suggest_design_patterns",
+      "inputs": {
+        "requirements": "{{requirements}}",
+        "context": "{{analyze-requirements.analysis}}"
+      },
+      "outputs": ["patterns"],
+      "dependsOn": ["analyze-requirements"]
+    },
+    {
+      "id": "generate-code",
+      "service": "codegen",
+      "tool": "generate_code",
+      "inputs": {
+        "requirements": "{{requirements}}",
+        "language": "{{language}}",
+        "framework": "{{framework}}"
+      },
+      "outputs": ["code"],
+      "dependsOn": ["suggest-patterns", "decompose-tasks"],
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "backoffMs": 2000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "review-code",
+      "service": "sdlc",
+      "tool": "review_code",
+      "inputs": {
+        "code": "{{generate-code.code}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["review"],
+      "dependsOn": ["generate-code"]
+    },
+    {
+      "id": "refactor-code",
+      "service": "codegen",
+      "tool": "refactor_code",
+      "inputs": {
+        "code": "{{generate-code.code}}",
+        "language": "{{language}}",
+        "goals": ["{{review-code.review.recommendations}}"]
+      },
+      "outputs": ["refactoredCode"],
+      "dependsOn": ["review-code"],
+      "condition": "{{review-code.review.score}} < 80"
+    },
+    {
+      "id": "generate-tests",
+      "service": "sdlc",
+      "tool": "generate_tests",
+      "inputs": {
+        "code": "{{refactor-code.refactoredCode}}",
+        "language": "{{language}}",
+        "framework": "{{testFramework}}"
+      },
+      "outputs": ["tests"],
+      "dependsOn": ["refactor-code"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1500,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "security-scan",
+      "service": "security",
+      "tool": "scan_code",
+      "inputs": {
+        "code": "{{refactor-code.refactoredCode}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["vulnerabilities", "score"],
+      "dependsOn": ["generate-tests"]
+    },
+    {
+      "id": "performance-profile",
+      "service": "performance",
+      "tool": "profile_cpu",
+      "inputs": {
+        "code": "{{refactor-code.refactoredCode}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["profile"],
+      "dependsOn": ["security-scan"]
+    },
+    {
+      "id": "optimize-performance",
+      "service": "performance",
+      "tool": "optimize_algorithm",
+      "inputs": {
+        "code": "{{refactor-code.refactoredCode}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["optimizedCode"],
+      "dependsOn": ["performance-profile"],
+      "condition": "{{performance-profile.profile.hotspots}} contains bottleneck"
+    },
+    {
+      "id": "track-tech-debt",
+      "service": "sdlc",
+      "tool": "track_tech_debt",
+      "inputs": {
+        "codebase": "{{optimize-performance.optimizedCode}}"
+      },
+      "outputs": ["debtScore"],
+      "dependsOn": ["optimize-performance"]
+    },
+    {
+      "id": "generate-docs",
+      "service": "sdlc",
+      "tool": "generate_documentation",
+      "inputs": {
+        "code": "{{optimize-performance.optimizedCode}}",
+        "language": "{{language}}",
+        "format": "markdown"
+      },
+      "outputs": ["documentation"],
+      "dependsOn": ["track-tech-debt"]
+    },
+    {
+      "id": "setup-cicd",
+      "service": "sdlc",
+      "tool": "setup_cicd",
+      "inputs": {
+        "project": "{{project_name}}",
+        "platform": "{{cicd_platform}}"
+      },
+      "outputs": ["cicdConfig"],
+      "dependsOn": ["generate-docs"]
+    }
+  ],
+  "errorHandling": {
+    "onStepFailure": "continue",
+    "notifyOnError": true
+  },
+  "timeout": 1800000
+}

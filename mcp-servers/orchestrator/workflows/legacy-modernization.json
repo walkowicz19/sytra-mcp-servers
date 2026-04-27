@@ -1,0 +1,143 @@
+{
+  "id": "legacy-modernization",
+  "name": "Legacy Code Modernization",
+  "description": "Modernize legacy code with translation and optimization",
+  "version": "1.0.0",
+  "metadata": {
+    "category": "modernization",
+    "tags": ["legacy", "translation", "modernization"],
+    "author": "Stark Team",
+    "estimatedDuration": "10-20 minutes"
+  },
+  "steps": [
+    {
+      "id": "parse-legacy",
+      "service": "legacy",
+      "tool": "parse_cobol",
+      "inputs": {
+        "code": "{{legacy_code}}"
+      },
+      "outputs": ["ast", "metadata"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "analyze-complexity",
+      "service": "legacy",
+      "tool": "analyze_complexity",
+      "inputs": {
+        "code": "{{legacy_code}}",
+        "language": "{{source_language}}"
+      },
+      "outputs": ["complexity"],
+      "dependsOn": ["parse-legacy"]
+    },
+    {
+      "id": "analyze-dependencies",
+      "service": "legacy",
+      "tool": "analyze_dependencies",
+      "inputs": {
+        "code": "{{legacy_code}}",
+        "language": "{{source_language}}"
+      },
+      "outputs": ["dependencies"],
+      "dependsOn": ["parse-legacy"]
+    },
+    {
+      "id": "translate-code",
+      "service": "legacy",
+      "tool": "translate_cobol_to_python",
+      "inputs": {
+        "code": "{{legacy_code}}"
+      },
+      "outputs": ["translatedCode"],
+      "dependsOn": ["analyze-complexity", "analyze-dependencies"],
+      "retryPolicy": {
+        "maxAttempts": 3,
+        "backoffMs": 2000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "validate-translation",
+      "service": "codegen",
+      "tool": "validate_code",
+      "inputs": {
+        "code": "{{translate-code.translatedCode}}",
+        "language": "{{target_language}}"
+      },
+      "outputs": ["valid", "errors"],
+      "dependsOn": ["translate-code"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "optimize-performance",
+      "service": "performance",
+      "tool": "optimize_algorithm",
+      "inputs": {
+        "code": "{{translate-code.translatedCode}}",
+        "language": "{{target_language}}"
+      },
+      "outputs": ["optimizedCode"],
+      "dependsOn": ["validate-translation"],
+      "condition": "{{validate-translation.valid}} == true"
+    },
+    {
+      "id": "security-scan",
+      "service": "security",
+      "tool": "scan_code",
+      "inputs": {
+        "code": "{{optimize-performance.optimizedCode}}",
+        "language": "{{target_language}}"
+      },
+      "outputs": ["vulnerabilities", "score"],
+      "dependsOn": ["optimize-performance"]
+    },
+    {
+      "id": "generate-tests",
+      "service": "sdlc",
+      "tool": "generate_tests",
+      "inputs": {
+        "code": "{{optimize-performance.optimizedCode}}",
+        "language": "{{target_language}}"
+      },
+      "outputs": ["tests"],
+      "dependsOn": ["security-scan"]
+    },
+    {
+      "id": "generate-migration-plan",
+      "service": "legacy",
+      "tool": "generate_migration_plan",
+      "inputs": {
+        "legacyCode": "{{legacy_code}}",
+        "targetLanguage": "{{target_language}}"
+      },
+      "outputs": ["migrationPlan"],
+      "dependsOn": ["generate-tests"]
+    },
+    {
+      "id": "generate-documentation",
+      "service": "sdlc",
+      "tool": "generate_documentation",
+      "inputs": {
+        "code": "{{optimize-performance.optimizedCode}}",
+        "language": "{{target_language}}",
+        "format": "markdown"
+      },
+      "outputs": ["documentation"],
+      "dependsOn": ["generate-migration-plan"]
+    }
+  ],
+  "errorHandling": {
+    "onStepFailure": "stop",
+    "notifyOnError": true
+  },
+  "timeout": 1200000
+}

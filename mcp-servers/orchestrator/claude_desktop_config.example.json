@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "stark-orchestrator": {
+      "command": "node",
+      "args": [
+        "C:/Users/YourUsername/Documents/Automation/stark-mcp/mcp-servers/orchestrator/build/index.js"
+      ],
+      "env": {
+        "STARK_SECURITY_URL": "http://localhost:8001",
+        "STARK_CODEGEN_URL": "http://localhost:8002",
+        "STARK_MEMORY_URL": "http://localhost:8003",
+        "STARK_INTELLIGENCE_URL": "http://localhost:8004",
+        "STARK_TOKENS_URL": "http://localhost:8005",
+        "STARK_SDLC_URL": "http://localhost:8006",
+        "STARK_LEGACY_URL": "http://localhost:8007",
+        "STARK_PERFORMANCE_URL": "http://localhost:8009",
+        "STARK_WORKFLOW_TIMEOUT": "300000",
+        "STARK_MAX_RETRIES": "3",
+        "STARK_LOG_LEVEL": "info"
+      }
+    }
+  }
+}

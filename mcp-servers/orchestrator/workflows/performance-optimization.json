@@ -1,0 +1,154 @@
+{
+  "id": "performance-optimization",
+  "name": "Performance Optimization",
+  "description": "Comprehensive performance analysis and optimization",
+  "version": "1.0.0",
+  "metadata": {
+    "category": "optimization",
+    "tags": ["performance", "optimization", "profiling"],
+    "author": "Stark Team",
+    "estimatedDuration": "10-15 minutes"
+  },
+  "steps": [
+    {
+      "id": "profile-cpu",
+      "service": "performance",
+      "tool": "profile_cpu",
+      "inputs": {
+        "code": "{{code}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["cpuProfile"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "profile-memory",
+      "service": "performance",
+      "tool": "profile_memory",
+      "inputs": {
+        "code": "{{code}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["memoryProfile"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1000,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "profile-io",
+      "service": "performance",
+      "tool": "profile_io",
+      "inputs": {
+        "code": "{{code}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["ioProfile"]
+    },
+    {
+      "id": "analyze-bottlenecks",
+      "service": "performance",
+      "tool": "analyze_bottlenecks",
+      "inputs": {
+        "code": "{{code}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["bottlenecks"],
+      "dependsOn": ["profile-cpu", "profile-memory", "profile-io"]
+    },
+    {
+      "id": "optimize-algorithm",
+      "service": "performance",
+      "tool": "optimize_algorithm",
+      "inputs": {
+        "code": "{{code}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["optimizedCode"],
+      "dependsOn": ["analyze-bottlenecks"],
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffMs": 1500,
+        "backoffMultiplier": 2
+      }
+    },
+    {
+      "id": "optimize-cache",
+      "service": "performance",
+      "tool": "optimize_cache",
+      "inputs": {
+        "code": "{{optimize-algorithm.optimizedCode}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["cacheOptimization"],
+      "dependsOn": ["optimize-algorithm"]
+    },
+    {
+      "id": "suggest-parallelization",
+      "service": "performance",
+      "tool": "suggest_parallelization",
+      "inputs": {
+        "code": "{{optimize-algorithm.optimizedCode}}",
+        "language": "{{language}}"
+      },
+      "outputs": ["parallelizationOpportunities"],
+      "dependsOn": ["optimize-cache"]
+    },
+    {
+      "id": "optimize-tokens",
+      "service": "tokens",
+      "tool": "optimize_context",
+      "inputs": {
+        "content": "{{optimize-algorithm.optimizedCode}}",
+        "maxTokens": 4000
+      },
+      "outputs": ["optimizedContent"],
+      "dependsOn": ["suggest-parallelization"]
+    },
+    {
+      "id": "compress-context",
+      "service": "memory",
+      "tool": "compress_context",
+      "inputs": {
+        "context": "{{optimize-tokens.optimizedContent}}",
+        "targetTokens": 2000
+      },
+      "outputs": ["compressed"],
+      "dependsOn": ["optimize-tokens"]
+    },
+    {
+      "id": "benchmark-results",
+      "service": "performance",
+      "tool": "benchmark_code",
+      "inputs": {
+        "code": "{{optimize-algorithm.optimizedCode}}",
+        "language": "{{language}}",
+        "iterations": 100
+      },
+      "outputs": ["benchmarkResults"],
+      "dependsOn": ["compress-context"]
+    },
+    {
+      "id": "generate-report",
+      "service": "sdlc",
+      "tool": "generate_documentation",
+      "inputs": {
+        "code": "{{optimize-algorithm.optimizedCode}}",
+        "language": "{{language}}",
+        "format": "markdown"
+      },
+      "outputs": ["report"],
+      "dependsOn": ["benchmark-results"]
+    }
+  ],
+  "errorHandling": {
+    "onStepFailure": "continue",
+    "notifyOnError": true
+  },
+  "timeout": 900000
+}
