@@ -153,7 +153,7 @@ Stark is a suite of **production-ready MCP servers** that transform AI assistant
 
 ## 🚀 Enterprise-Scale Capabilities
 
-Stark MCP provides comprehensive tools for handling enterprise-scale systems:
+Stark provides comprehensive tools for handling enterprise-scale systems:
 
 ### 📊 Large-Scale Code Intelligence (12 Tools)
 
