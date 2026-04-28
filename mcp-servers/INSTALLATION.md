@@ -49,10 +49,12 @@ done
 Or build each server individually:
 
 ```bash
-cd mcp-servers/security-guardrails && npm install && npm run build
+cd mcp-servers/orchestrator && npm install && npm run build
+cd ../intelligence-amplification && npm install && npm run build
+cd ../schema-intelligence && npm install && npm run build
+cd ../security-guardrails && npm install && npm run build
 cd ../code-generation && npm install && npm run build
 cd ../memory-management && npm install && npm run build
-cd ../intelligence-amplification && npm install && npm run build
 cd ../token-optimization && npm install && npm run build
 cd ../sdlc-integration && npm install && npm run build
 cd ../legacy-support && npm install && npm run build
@@ -91,6 +93,9 @@ cd services/sdlc-integration && uvicorn src.main:app --port 8006
 
 # Legacy Support (port 8007)
 cd services/legacy-support && uvicorn src.main:app --port 8007
+
+# Schema Intelligence (port 8008)
+cd services/schema-intelligence && uvicorn src.main:app --port 8008
 
 # Performance Optimizer (port 8009)
 cd services/performance-optimizer && uvicorn src.main:app --port 8009

@@ -2,6 +2,96 @@
 
 This guide provides examples of how to use each Stark MCP server through Claude Desktop or other MCP clients.
 
+## Orchestrator
+
+### Route Request
+
+```
+Route this request to the appropriate server: "Analyze this Python code for security vulnerabilities"
+```
+
+### Execute Workflow
+
+```
+Execute the legacy-modernization workflow for a COBOL banking system
+```
+
+### Get Available Tools
+
+```
+List all available tools across all servers
+```
+
+### Coordinate Multi-Server Task
+
+```
+Coordinate a task that requires code generation, security scanning, and performance profiling
+```
+
+## Intelligence Amplification
+
+### Analyze Code Structure
+
+```
+Analyze the structure of this Python module:
+[code content]
+```
+
+### Detect Code Patterns
+
+```
+Detect design patterns in this codebase: [code]
+```
+
+### Suggest Refactoring
+
+```
+Suggest refactoring improvements for this function:
+def process_data(data):
+    result = []
+    for item in data:
+        if item > 0:
+            result.append(item * 2)
+    return result
+```
+
+### Extract Code Metrics
+
+```
+Extract complexity metrics from this codebase
+```
+
+## Schema Intelligence
+
+### Analyze Schema
+
+```
+Analyze this database schema:
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Optimize Schema
+
+```
+Suggest optimizations for this database schema with 1M+ records
+```
+
+### Generate Migration
+
+```
+Generate a migration plan to add full-text search to the products table
+```
+
+### Validate Schema
+
+```
+Validate this schema for best practices and potential issues
+```
+
 ## Security Guardrails
 
 ### Classify Data Sensitivity
@@ -258,12 +348,33 @@ def fibonacci(n):
 
 You can use multiple servers together for complex workflows:
 
+### Example 1: Secure Code Development
 ```
 1. Generate a Python function for user authentication (Code Generation)
 2. Scan it for security vulnerabilities (Security Guardrails)
-3. Analyze its complexity (Code Generation)
+3. Analyze its complexity (Intelligence Amplification)
 4. Generate test cases (SDLC Integration)
 5. Profile its performance (Performance Optimizer)
+```
+
+### Example 2: Legacy System Modernization
+```
+1. Parse legacy COBOL code (Legacy Support)
+2. Analyze database schema (Schema Intelligence)
+3. Generate migration plan (Legacy Support)
+4. Translate to modern language (Legacy Support)
+5. Optimize performance (Performance Optimizer)
+```
+
+### Example 3: Using Orchestrator
+```
+Execute the full-sdlc-cycle workflow which automatically:
+1. Analyzes requirements
+2. Generates code
+3. Reviews security
+4. Creates tests
+5. Optimizes performance
+6. Generates documentation
 ```
 
 ## Best Practices
