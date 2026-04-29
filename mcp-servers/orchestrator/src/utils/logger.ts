@@ -46,13 +46,15 @@ class Logger {
 
     const formattedMessage = this.formatMessage(level, message, context);
 
+    // MCP servers must write logs to stderr, not stdout
+    // stdout is reserved for JSON-RPC protocol messages
     switch (level) {
       case LogLevel.DEBUG:
       case LogLevel.INFO:
-        console.log(formattedMessage);
+        console.error(formattedMessage);
         break;
       case LogLevel.WARN:
-        console.warn(formattedMessage);
+        console.error(formattedMessage);
         break;
       case LogLevel.ERROR:
         console.error(formattedMessage);
