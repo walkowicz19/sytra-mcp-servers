@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sytra MCP Dashboard</title>
+    
+    <!-- Google Fonts - Art Deco Style -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poiret+One&family=Raleway:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Chart.js for token usage graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- D3.js for memory visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>SYTRA MCP</h1>
+                <p class="subtitle">Management Dashboard</p>
+            </div>
+            <div class="header-status">
+                <div class="status-indicator" id="systemStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Initializing...</span>
+                </div>
+                <div class="connection-status" id="wsStatus">
+                    <span class="ws-dot"></span>
+                    <span class="ws-text">Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <button class="nav-item active" data-section="overview">
+            <i class="bi bi-bar-chart-fill nav-icon" style="color: var(--accent-blue);"></i>
+            <span class="nav-label">Overview</span>
+        </button>
+        <button class="nav-item" data-section="models">
+            <i class="bi bi-cpu-fill nav-icon" style="color: var(--accent-purple);"></i>
+            <span class="nav-label">Models</span>
+        </button>
+        <button class="nav-item" data-section="tokens">
+            <i class="bi bi-coin nav-icon" style="color: var(--accent-gold);"></i>
+            <span class="nav-label">Tokens</span>
+        </button>
+        <button class="nav-item" data-section="logs">
+            <i class="bi bi-file-text-fill nav-icon" style="color: var(--accent-blue);"></i>
+            <span class="nav-label">Logs</span>
+        </button>
+        <button class="nav-item" data-section="credentials">
+            <i class="bi bi-shield-lock-fill nav-icon" style="color: var(--accent-green);"></i>
+            <span class="nav-label">Credentials</span>
+        </button>
+        <button class="nav-item" data-section="security">
+            <i class="bi bi-shield-fill-check nav-icon" style="color: var(--accent-orange);"></i>
+            <span class="nav-label">Security</span>
+        </button>
+        <button class="nav-item" data-section="memory">
+            <i class="bi bi-diagram-3-fill nav-icon" style="color: var(--accent-purple);"></i>
+            <span class="nav-label">Memory</span>
+        </button>
+        <button class="nav-item" data-section="health">
+            <i class="bi bi-heart-pulse-fill nav-icon" style="color: var(--accent-red);"></i>
+            <span class="nav-label">Health</span>
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Overview Section -->
+        <section id="overview" class="section active">
+            <h2 class="section-title">System Overview</h2>
+            
+            <div class="cards-grid">
+                <!-- System Health Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>System Health</h3>
+                        <i class="bi bi-heart-pulse-fill card-icon" style="color: var(--accent-red);"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-large" id="overviewHealth">
+                            <div class="metric-value">--</div>
+                            <div class="metric-label">Overall Status</div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-small">
+                                <div class="metric-value" id="healthyServers">--</div>
+                                <div class="metric-label">Healthy</div>
+                            </div>
+                            <div class="metric-small">
+                                <div class="metric-value" id="unhealthyServers">--</div>
+                                <div class="metric-label">Unhealthy</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Token Usage Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Token Usage (24h)</h3>
+                        <i class="bi bi-coin card-icon" style="color: var(--accent-gold);"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-large">
+                            <div class="metric-value" id="totalTokens">--</div>
+                            <div class="metric-label">Total Tokens</div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-small">
+                                <div class="metric-value" id="totalCost">$--</div>
+                                <div class="metric-label">Cost</div>
+                            </div>
+                            <div class="metric-small">
+                                <div class="metric-value" id="totalRequests">--</div>
+                                <div class="metric-label">Requests</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hallucination Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Hallucination</h3>
+                        <i class="bi bi-search card-icon" style="color: var(--accent-blue);"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-large">
+                            <div class="metric-value" id="avgConfidence">--%</div>
+                            <div class="metric-label">Avg Confidence</div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-small">
+                                <div class="metric-value" id="flaggedCount">--</div>
+                                <div class="metric-label">Flagged</div>
+                            </div>
+                            <div class="metric-small">
+                                <div class="metric-value" id="totalChecks">--</div>
+                                <div class="metric-label">Total Checks</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memory Stats Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Memory Graph</h3>
+                        <i class="bi bi-diagram-3-fill card-icon" style="color: var(--accent-purple);"></i>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-large">
+                            <div class="metric-value" id="memoryNodes">--</div>
+                            <div class="metric-label">Memory Nodes</div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-small">
+                                <div class="metric-value" id="memoryRelationships">--</div>
+                                <div class="metric-label">Relationships</div>
+                            </div>
+                            <div class="metric-small">
+                                <div class="metric-value" id="memoryAccess">--</div>
+                                <div class="metric-label">Total Access</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="card" id="alertsCard" style="display: none;">
+                <div class="card-header">
+                    <h3>Active Alerts</h3>
+                    <i class="bi bi-exclamation-triangle-fill card-icon" style="color: var(--accent-orange);"></i>
+                </div>
+                <div class="card-body">
+                    <div id="alertsList"></div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Recent Activity</h3>
+                    <i class="bi bi-list-check card-icon" style="color: var(--accent-blue);"></i>
+                </div>
+                <div class="card-body">
+                    <div id="recentActivity" class="activity-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Models Section -->
+        <section id="models" class="section">
+            <h2 class="section-title">Model Management</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3>Active Models</h3>
+                    <button class="btn btn-primary" id="addModelBtn">Add Model</button>
+                </div>
+                <div class="card-body">
+                    <div id="modelsList" class="models-grid"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Available Models</h3>
+                </div>
+                <div class="card-body">
+                    <div id="availableModelsList" class="models-grid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tokens Section -->
+        <section id="tokens" class="section">
+            <h2 class="section-title">Token Usage & Cost Tracking</h2>
+            
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Usage Statistics</h3>
+                        <select id="tokenPeriodSelect" class="select-input">
+                            <option value="1h">Last Hour</option>
+                            <option value="24h" selected>Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                        </select>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="tokenUsageChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Cost Projection</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="costProjection"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Usage by Model</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="modelUsageChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logs Section -->
+        <section id="logs" class="section">
+            <h2 class="section-title">Logs & Activity</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3>Log Viewer</h3>
+                    <div class="log-controls">
+                        <select id="logTypeSelect" class="select-input">
+                            <option value="all">All Logs</option>
+                            <option value="mcp">MCP Servers</option>
+                            <option value="commands">Commands</option>
+                            <option value="hallucinations">Hallucinations</option>
+                        </select>
+                        <select id="logLevelSelect" class="select-input">
+                            <option value="">All Levels</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARN">WARN</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                        <button class="btn btn-secondary" id="clearLogsBtn">Clear</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="logViewer" class="log-viewer"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Credentials Section -->
+        <section id="credentials" class="section">
+            <h2 class="section-title">Credential Management</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3>Stored Credentials</h3>
+                    <button class="btn btn-primary" id="addCredentialBtn">Add Credential</button>
+                </div>
+                <div class="card-body">
+                    <div id="credentialsList" class="credentials-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security Section -->
+        <section id="security" class="section">
+            <h2 class="section-title">Security Configuration</h2>
+            
+            <!-- Admin Password Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Admin Password</h3>
+                    <i class="bi bi-key-fill card-icon" style="color: var(--accent-orange);"></i>
+                </div>
+                <div class="card-body">
+                    <div id="passwordStatus" class="password-status">
+                        <div class="status-indicator">
+                            <i class="bi bi-shield-x" style="color: var(--accent-red);"></i>
+                            <span>Not Configured</span>
+                        </div>
+                    </div>
+                    
+                    <form id="adminPasswordForm" class="password-form">
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="newPassword" class="text-input" placeholder="Enter new password" required minlength="8">
+                                <button type="button" class="btn-icon" id="toggleNewPassword">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength" id="passwordStrength">
+                                <div class="strength-bar">
+                                    <div class="strength-fill"></div>
+                                </div>
+                                <span class="strength-text">Password strength: <span id="strengthLevel">-</span></span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="confirmPassword" class="text-input" placeholder="Confirm password" required minlength="8">
+                                <button type="button" class="btn-icon" id="toggleConfirmPassword">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <div id="passwordMatch" class="password-match"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password (if updating)</label>
+                            <input type="password" id="currentPassword" class="text-input" placeholder="Enter current password">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="setPasswordBtn">
+                                <i class="bi bi-shield-check"></i>
+                                Set Admin Password
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div id="passwordFeedback" class="feedback-message"></div>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Security Settings</h3>
+                    <i class="bi bi-gear-fill card-icon" style="color: var(--accent-blue);"></i>
+                </div>
+                <div class="card-body">
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Workspace Protection</h4>
+                                <p>Restrict file operations to workspace directory only</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="workspaceOnlyToggle" checked disabled>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Dangerous Action Prompts</h4>
+                                <p>Require password for operations outside workspace</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="dangerousActionToggle" checked disabled>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Credential Redaction</h4>
+                                <p>Automatically redact sensitive credentials in logs</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="credentialRedactionToggle" checked disabled>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Audit Log -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Security Audit Log</h3>
+                    <button class="btn btn-secondary" id="refreshAuditBtn">Refresh</button>
+                </div>
+                <div class="card-body">
+                    <div id="securityAuditLog" class="audit-log"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Memory Section -->
+        <section id="memory" class="section">
+            <h2 class="section-title">Memory Graph Visualization</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3>Memory Graph</h3>
+                    <div class="memory-controls">
+                        <input type="text" id="memorySearch" class="text-input" placeholder="Search memory...">
+                        <button class="btn btn-secondary" id="resetZoomBtn">Reset Zoom</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="memoryGraph" class="memory-graph"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Memory Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div id="memoryStats"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Health Section -->
+        <section id="health" class="section">
+            <h2 class="section-title">MCP Server Health & Monitoring</h2>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3>Server Status</h3>
+                    <button class="btn btn-secondary" id="refreshHealthBtn">Refresh</button>
+                </div>
+                <div class="card-body">
+                    <div id="serverStatusGrid" class="server-grid"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Performance Metrics</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div id="modalContent" class="modal-content"></div>
+    </div>
+
+    <!-- Password Prompt Modal for Dangerous Actions -->
+    <div id="passwordPromptOverlay" class="password-prompt-overlay" style="display: none;">
+        <div class="password-prompt-modal">
+            <div class="password-prompt-header">
+                <i class="bi bi-exclamation-triangle-fill warning-icon"></i>
+                <h3>Security Confirmation Required</h3>
+            </div>
+            
+            <div class="password-prompt-body">
+                <div class="action-warning">
+                    <p class="warning-text">The AI is attempting to perform a potentially dangerous action:</p>
+                    <div class="action-details" id="actionDetails">
+                        <div class="detail-item">
+                            <strong>Action:</strong>
+                            <span id="actionType">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Target:</strong>
+                            <code id="actionTarget">-</code>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Reason:</strong>
+                            <span id="actionReason">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="password-prompt-form">
+                    <label for="adminPasswordInput">Enter Admin Password to Proceed:</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="adminPasswordInput" class="text-input" placeholder="Admin password" autocomplete="off">
+                        <button type="button" class="btn-icon" id="toggleAdminPassword">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <div id="passwordError" class="error-message"></div>
+                </div>
+                
+                <div class="session-option">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberSession">
+                        <span>Remember for this session (1 hour)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="password-prompt-footer">
+                <button class="btn btn-secondary" id="denyActionBtn">
+                    <i class="bi bi-x-circle"></i>
+                    Deny
+                </button>
+                <button class="btn btn-danger" id="allowActionBtn">
+                    <i class="bi bi-shield-check"></i>
+                    Allow Action
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/security.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/memory-viz.js"></script>
+    <script src="js/logs.js"></script>
+    <script src="js/credentials.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

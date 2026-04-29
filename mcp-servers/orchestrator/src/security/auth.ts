@@ -234,6 +234,47 @@ export class AdminAuth {
       remainingTime,
     };
   }
+
+  /**
+   * Verify password via dashboard API
+   */
+  async verifyPasswordViaDashboard(password: string, context: string): Promise<boolean> {
+    try {
+      // In production, this would call the dashboard API
+      // For now, we'll use the local verification
+      return await this.validatePassword(password, context);
+    } catch (error) {
+      logger.error('Failed to verify password via dashboard', error as Error);
+      return false;
+    }
+  }
+
+  /**
+   * Request password from dashboard for dangerous action
+   */
+  async requestDashboardPassword(action: {
+    type: string;
+    target: string;
+    reason: string;
+  }): Promise<{ allowed: boolean; password?: string }> {
+    try {
+      // This would integrate with the dashboard's password prompt
+      // In a real implementation:
+      // 1. Send action details to dashboard via WebSocket/HTTP
+      // 2. Dashboard shows password prompt modal
+      // 3. User enters password
+      // 4. Dashboard sends password back for verification
+      // 5. Return verification result
+      
+      logger.info('Password required for dangerous action', action);
+      
+      // For now, return not allowed (requires manual implementation)
+      return { allowed: false };
+    } catch (error) {
+      logger.error('Failed to request dashboard password', error as Error);
+      return { allowed: false };
+    }
+  }
 }
 
 // Singleton instance

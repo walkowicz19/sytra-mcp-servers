@@ -320,6 +320,63 @@ export class SecurityMiddleware {
       return [];
     }
   }
+
+  /**
+   * Request password verification from dashboard for dangerous action
+   */
+  async requestPasswordVerification(action: {
+    type: string;
+    target: string;
+    reason: string;
+  }): Promise<{ allowed: boolean; sessionToken?: string }> {
+    try {
+      // In a real implementation, this would communicate with the dashboard
+      // via WebSocket or HTTP to show the password prompt
+      logger.warn('Dangerous action requires password verification', action);
+      
+      // For now, we'll check if admin password is configured
+      const auth = getAdminAuth();
+      if (!auth.isConfigured()) {
+        logger.warn('Admin password not configured, allowing action by default');
+        return { allowed: true };
+      }
+
+      // In production, this should:
+      // 1. Send action details to dashboard via WebSocket
+      // 2. Wait for user to enter password in dashboard UI
+      // 3. Receive verification result from dashboard API
+      // 4. Return the result
+      
+      // For now, we'll require the action to be explicitly allowed
+      logger.error('Password verification required but not implemented in this context');
+      return { allowed: false };
+    } catch (error) {
+      logger.error('Failed to request password verification', error as Error);
+      return { allowed: false };
+    }
+  }
+
+  /**
+   * Check if an action is dangerous and requires password
+   */
+  isDangerousAction(toolName: string, args: Record<string, any>): boolean {
+    const guardrails = getSecurityGuardrails();
+    const validator = getWorkspaceValidator();
+
+    // Check if tool operates outside workspace
+    const pathValidation = validator.validateToolArgs(toolName, args);
+    if (!pathValidation.valid && pathValidation.requiresAuth) {
+      return true;
+    }
+
+    // Check if tool is in dangerous operations list
+    const guardrailResult = guardrails.validateToolExecution(toolName, args);
+    if (!guardrailResult.allowed && guardrailResult.requiresAuth) {
+      return true;
+    }
+
+    return false;
+  }
 }
 
 // Singleton instance
