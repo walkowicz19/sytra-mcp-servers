@@ -16,12 +16,67 @@ import {
 import { tools, toolHandlers } from './tools.js';
 import { logger } from './utils/logger.js';
 import { ErrorHandler } from './utils/error-handler.js';
+import { getSecurityMiddleware } from './security/middleware.js';
+import { getAutoRouter } from './routing/auto-router.js';
+import * as fs from 'fs';
+import * as path from 'path';
+
+/**
+ * Load security configuration
+ */
+function loadSecurityConfig(): any {
+  try {
+    const configPath = path.join(process.cwd(), 'security-config.json');
+    if (fs.existsSync(configPath)) {
+      const configData = fs.readFileSync(configPath, 'utf-8');
+      return JSON.parse(configData);
+    }
+    logger.warn('Security config not found, using defaults');
+    return {
+      sensitiveFilePatterns: ['.env*', '*.key', '*.pem'],
+      dangerousOperations: ['delete', 'rm', 'unlink'],
+      systemPaths: [],
+      workspaceOnly: true,
+      requirePasswordFor: ['out-of-workspace', 'sensitive-files', 'dangerous-operations'],
+      autoRouting: { enabled: true, confidenceThreshold: 0.7 },
+      rateLimiting: { maxAttempts: 5, windowMs: 900000, blockDurationMs: 3600000 },
+    };
+  } catch (error) {
+    logger.error('Failed to load security config', error as Error);
+    throw error;
+  }
+}
+
+/**
+ * Get workspace directory from environment
+ */
+function getWorkspaceDir(): string {
+  // Try to get from environment variable
+  const envWorkspace = process.env.WORKSPACE_DIR || process.env.PWD || process.cwd();
+  return path.resolve(envWorkspace);
+}
 
 /**
  * Create and configure the MCP server
  */
 async function main() {
   logger.info('Starting Sytra Orchestrator MCP Server');
+
+  // Load security configuration
+  const securityConfig = loadSecurityConfig();
+  const workspaceDir = getWorkspaceDir();
+  
+  logger.info('Workspace directory', { workspaceDir });
+
+  // Initialize security middleware
+  const securityMiddleware = getSecurityMiddleware();
+  await securityMiddleware.initialize({
+    workspaceDir,
+    securityConfig,
+  });
+
+  // Initialize auto-router
+  const autoRouter = getAutoRouter(securityConfig.autoRouting);
 
   const server = new Server(
     {
@@ -47,7 +102,7 @@ async function main() {
   });
 
   /**
-   * Handle tool execution
+   * Handle tool execution with security checks
    */
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
@@ -55,12 +110,49 @@ async function main() {
     logger.info('Tool execution requested', { tool: name });
 
     try {
+      // Security check: Validate tool execution
+      const securityCheck = await securityMiddleware.checkToolExecution(name, args || {});
+      
+      if (!securityCheck.allowed) {
+        securityMiddleware.logSecurityEvent({
+          type: securityCheck.requiresAuth ? 'auth_required' : 'blocked',
+          toolName: name,
+          details: { reason: securityCheck.reason, severity: securityCheck.severity },
+        });
+
+        const errorMessage = securityCheck.requiresAuth
+          ? `${securityCheck.reason}\n\n${securityCheck.authPrompt || 'Admin authentication required.'}\n\nTo configure admin password, set SYTRA_ADMIN_PASSWORD environment variable.`
+          : securityCheck.reason;
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Security check failed',
+                message: errorMessage,
+                severity: securityCheck.severity,
+                requiresAuth: securityCheck.requiresAuth,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+
       // Get the appropriate handler
       const handler = toolHandlers[name as keyof typeof toolHandlers];
 
       if (!handler) {
         throw new Error(`Unknown tool: ${name}`);
       }
+
+      // Log allowed operation
+      securityMiddleware.logSecurityEvent({
+        type: 'allowed',
+        toolName: name,
+        details: { args },
+      });
 
       // Execute the tool
       const result = await handler(args || {});

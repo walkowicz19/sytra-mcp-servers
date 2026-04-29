@@ -1,0 +1,66 @@
+{
+  "sensitiveFilePatterns": [
+    ".env",
+    ".env.*",
+    "*.key",
+    "*.pem",
+    "*.p12",
+    "*.pfx",
+    "credentials.*",
+    "secrets.*",
+    "config/database.*",
+    "*.crt",
+    "*.cer",
+    "id_rsa",
+    "id_dsa",
+    "*.ppk",
+    "*.keystore",
+    "*.jks",
+    "*.password",
+    "*.pwd",
+    ".aws/credentials",
+    ".ssh/id_*",
+    "*.token"
+  ],
+  "dangerousOperations": [
+    "delete",
+    "unlink",
+    "rm",
+    "rmdir",
+    "remove",
+    "destroy",
+    "truncate",
+    "drop",
+    "wipe"
+  ],
+  "systemPaths": [
+    "/etc",
+    "/sys",
+    "/proc",
+    "/dev",
+    "/boot",
+    "/root",
+    "C:\\Windows",
+    "C:\\Program Files",
+    "C:\\Program Files (x86)",
+    "/usr/bin",
+    "/usr/sbin",
+    "/bin",
+    "/sbin"
+  ],
+  "workspaceOnly": true,
+  "requirePasswordFor": [
+    "out-of-workspace",
+    "sensitive-files",
+    "dangerous-operations"
+  ],
+  "autoRouting": {
+    "enabled": true,
+    "confidenceThreshold": 0.7
+  },
+  "rateLimiting": {
+    "maxAttempts": 5,
+    "windowMs": 900000,
+    "blockDurationMs": 3600000
+  }
+}
