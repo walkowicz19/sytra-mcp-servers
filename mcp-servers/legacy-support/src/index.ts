@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -6,7 +6,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { tools } from "./tools.js";
-import { legacyClient, toolEndpoints } from "./client.js";
+import { callTool } from "./client.js";
 
 const server = new Server(
   {
@@ -26,34 +26,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
-
+  
   try {
-    const endpoint = toolEndpoints[name];
-    if (!endpoint) {
-      throw new Error(`Unknown tool: ${name}`);
-    }
-
-    const result = await legacyClient.post(endpoint, args || {});
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
+    const result = await callTool(name, args || {});
+    return result as any;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       content: [
         {
           type: "text",
-          text: `Error: ${errorMessage}`,
+          text: `Error executing tool ${name}: ${error}`,
         },
       ],
       isError: true,
-    };
+    } as any;
   }
 });
 
@@ -69,3 +55,4 @@ main().catch((error) => {
 });
 
 // Made with Bob
+

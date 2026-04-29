@@ -212,7 +212,7 @@ export const tools: Tool[] = [
       },
       required: ["query"]
     }
-  }
+  },
   {
     name: "index_repository",
     description: "Index a large repository for semantic search and code intelligence. Supports 50GB+ repositories with incremental indexing for changed files only.",

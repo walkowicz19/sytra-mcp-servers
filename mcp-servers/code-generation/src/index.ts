@@ -30,7 +30,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   
   try {
-    return await callTool(name, args || {});
+    const result = await callTool(name, args || {});
+    return result as any;
   } catch (error) {
     return {
       content: [
@@ -40,7 +41,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         },
       ],
       isError: true,
-    };
+    } as any;
   }
 });
 

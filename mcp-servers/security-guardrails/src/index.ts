@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 /**
  * Security Guardrails MCP Server
@@ -46,7 +46,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   
   try {
-    return await callTool(name, args || {});
+    return await callTool(name, args || {}) as any;
   } catch (error) {
     return {
       content: [

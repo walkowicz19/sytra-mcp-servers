@@ -244,9 +244,43 @@ Stark MCP servers work with multiple IDEs and AI tools. See the **[IDE Configura
 
 ### Installation
 
-#### Option 1: Orchestrator Only (⭐ Recommended)
+#### Option 1: Automated Setup (⭐ Recommended)
 
-Install just the orchestrator for access to all capabilities:
+Use the automated setup script to build all servers at once:
+
+**Windows (PowerShell):**
+```powershell
+# Clone the repository
+git clone https://github.com/walkowicz19/stark-mcp-servers.git
+cd stark-mcp-servers
+
+# Run the automated setup script
+powershell -ExecutionPolicy Bypass -File setup-mcp-servers.ps1
+```
+
+**Linux/macOS:**
+```bash
+# Clone the repository
+git clone https://github.com/walkowicz19/stark-mcp-servers.git
+cd stark-mcp-servers
+
+# Make the script executable and run it
+chmod +x setup-mcp-servers.sh
+./setup-mcp-servers.sh
+```
+
+The script will:
+- ✅ Check prerequisites (Node.js 18+, npm)
+- ✅ Build the shared library
+- ✅ Build all 10 MCP servers
+- ✅ Verify build outputs
+- ✅ Display a summary report
+
+**Expected output:** `11/11 servers built successfully` in ~2-3 minutes
+
+#### Option 2: Orchestrator Only
+
+Install just the orchestrator (requires backend services running):
 
 ```bash
 # Clone the repository
@@ -260,7 +294,9 @@ npm install
 npm run build
 ```
 
-#### Option 2: Individual Servers
+**⚠️ Important:** The orchestrator requires the Stark backend services to be running. It coordinates calls to specialized services but doesn't include their implementation.
+
+#### Option 3: Individual Servers
 
 Install specific servers for targeted capabilities:
 
@@ -271,9 +307,9 @@ npm install
 npm run build
 ```
 
-#### Option 3: All Servers
+#### Option 4: Manual Build All
 
-Install all servers for maximum flexibility:
+Build all servers manually:
 
 ```bash
 cd mcp-servers
@@ -291,7 +327,7 @@ done
 
 Add to your `claude_desktop_config.json`:
 
-**Orchestrator Configuration:**
+**Orchestrator Configuration (Requires Backend Services):**
 ```json
 {
   "mcpServers": {
@@ -299,31 +335,52 @@ Add to your `claude_desktop_config.json`:
       "command": "node",
       "args": [
         "/absolute/path/to/stark-mcp-servers/mcp-servers/orchestrator/build/index.js"
-      ]
+      ],
+      "env": {
+        "CODEGEN_API_URL": "http://localhost:8002",
+        "MEMORY_API_URL": "http://localhost:8003",
+        "INTELLIGENCE_API_URL": "http://localhost:8004",
+        "TOKEN_API_URL": "http://localhost:8005",
+        "SDLC_API_URL": "http://localhost:8006",
+        "LEGACY_API_URL": "http://localhost:8007",
+        "SECURITY_API_URL": "http://localhost:8008",
+        "PERFORMANCE_API_URL": "http://localhost:8009",
+        "SCHEMA_API_URL": "http://localhost:8011"
+      }
     }
   }
 }
 ```
 
-**Individual Server Configuration:**
+**⚠️ Note:** The orchestrator requires backend services to be running. Make sure all required services are started before using the orchestrator.
+
+**Individual Server Configuration (Standalone):**
 ```json
 {
   "mcpServers": {
     "stark-security": {
       "command": "node",
       "args": [
-        "/absolute/path/to/stark-mcp-servers/mcp-servers/security-guardrails/build/index.js"
-      ]
+        "/absolute/path/to/stark-mcp-servers/mcp-servers/security-guardrails/build/security-guardrails/src/index.js"
+      ],
+      "env": {
+        "SECURITY_API_URL": "http://localhost:8008"
+      }
     },
     "stark-codegen": {
       "command": "node",
       "args": [
-        "/absolute/path/to/stark-mcp-servers/mcp-servers/code-generation/build/index.js"
-      ]
+        "/absolute/path/to/stark-mcp-servers/mcp-servers/code-generation/build/code-generation/src/index.js"
+      ],
+      "env": {
+        "CODEGEN_API_URL": "http://localhost:8002"
+      }
     }
   }
 }
 ```
+
+**Note:** Build output paths follow the pattern: `build/{server-name}/src/index.js`
 
 **For Other IDEs:**
 
