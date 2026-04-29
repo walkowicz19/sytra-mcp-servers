@@ -50,6 +50,62 @@ function check_prerequisites() {
     print_color "$GREEN" "All prerequisites met\n"
 }
 
+function check_build_tools() {
+    print_color "$CYAN" "\n=== Checking Build Tools ==="
+    
+    local has_build_tools=false
+    local build_tools_message=""
+    
+    # Check for node-gyp
+    if npm list -g node-gyp --depth=0 &> /dev/null; then
+        print_color "$GREEN" "node-gyp found"
+        has_build_tools=true
+    else
+        print_color "$YELLOW" "node-gyp not found"
+    fi
+    
+    # Check for build tools based on OS
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux - check for build-essential
+        if command -v gcc &> /dev/null && command -v g++ &> /dev/null && command -v make &> /dev/null; then
+            print_color "$GREEN" "Build tools found (gcc, g++, make)"
+            has_build_tools=true
+        else
+            print_color "$YELLOW" "Build tools not found"
+            build_tools_message="
+WARNING: Build tools not detected.
+The dashboard-api requires native dependencies (better-sqlite3, bcrypt) that need C++ build tools.
+
+To install build tools on Linux:
+  Ubuntu/Debian: sudo apt-get install build-essential
+  Fedora/RHEL:   sudo dnf groupinstall 'Development Tools'
+  Arch:          sudo pacman -S base-devel
+
+Alternative: Use the static HTML dashboard (limited functionality, no backend features)
+"
+        fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS - check for Xcode Command Line Tools
+        if xcode-select -p &> /dev/null; then
+            print_color "$GREEN" "Xcode Command Line Tools found"
+            has_build_tools=true
+        else
+            print_color "$YELLOW" "Xcode Command Line Tools not found"
+            build_tools_message="
+WARNING: Xcode Command Line Tools not detected.
+The dashboard-api requires native dependencies (better-sqlite3, bcrypt) that need C++ build tools.
+
+To install Xcode Command Line Tools:
+  xcode-select --install
+
+Alternative: Use the static HTML dashboard (limited functionality, no backend features)
+"
+        fi
+    fi
+    
+    echo "$has_build_tools|$build_tools_message"
+}
+
 function build_server() {
     local server_path=$1
     local server_name=$2
@@ -147,20 +203,66 @@ done
 print_color "$MAGENTA" "\n=== Setting Up Dashboard API ==="
 ((total_servers++))
 
+# Check build tools before attempting dashboard-api installation
+build_tools_result=$(check_build_tools)
+has_build_tools=$(echo "$build_tools_result" | cut -d'|' -f1)
+build_tools_message=$(echo "$build_tools_result" | cut -d'|' -f2-)
+
 if [ -d "dashboard-api/node_modules" ]; then
     print_color "$GREEN" "Dashboard API dependencies already installed"
     results["Dashboard API"]=1
     ((success_count++))
 else
+    if [ "$has_build_tools" = "false" ]; then
+        print_color "$YELLOW" "$build_tools_message"
+        echo ""
+        read -p "Attempt to install Dashboard API anyway? (Y/N): " response
+        echo "Note: Installation will likely fail without build tools"
+        
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            print_color "$YELLOW" "Skipping Dashboard API installation"
+            print_color "$CYAN" "\nFALLBACK: You can use the static HTML dashboard instead:"
+            static_dashboard_path=$(realpath "dashboard/index.html")
+            print_color "$GREEN" "  file://$static_dashboard_path"
+            print_color "$GRAY" "\nNote: Static dashboard has limited functionality (no backend features)"
+            results["Dashboard API"]=0
+            continue
+        fi
+    fi
+    
     print_color "$CYAN" "Installing Dashboard API dependencies..."
     cd dashboard-api
-    echo "  Installing npm packages..."
-    if npm install --silent > /dev/null 2>&1; then
+    echo "  Installing npm packages (this may take a few minutes)..."
+    install_output=$(npm install 2>&1)
+    install_exit_code=$?
+    
+    if [ $install_exit_code -eq 0 ]; then
         print_color "$GREEN" "  SUCCESS: Dashboard API ready"
         results["Dashboard API"]=1
         ((success_count++))
     else
-        print_color "$RED" "  FAILED: Dashboard API - npm install failed"
+        # Check for specific build errors
+        if echo "$install_output" | grep -q "node-gyp\|gyp ERR!\|make: .*Error"; then
+            print_color "$RED" "  FAILED: Native dependency build error"
+            print_color "$YELLOW" "\nThe dashboard-api requires C++ build tools for native dependencies:"
+            print_color "$GRAY" "  - better-sqlite3 (database)"
+            print_color "$GRAY" "  - bcrypt (password hashing)"
+            print_color "$CYAN" "\nSOLUTION OPTIONS:"
+            print_color "$WHITE" "  1. Install build tools:"
+            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                print_color "$GRAY" "     Ubuntu/Debian: sudo apt-get install build-essential"
+                print_color "$GRAY" "     Fedora/RHEL:   sudo dnf groupinstall 'Development Tools'"
+            elif [[ "$OSTYPE" == "darwin"* ]]; then
+                print_color "$GRAY" "     macOS: xcode-select --install"
+            fi
+            print_color "$WHITE" "\n  2. Use the static HTML dashboard (limited functionality):"
+            static_dashboard_path=$(realpath "../dashboard/index.html")
+            print_color "$GREEN" "     file://$static_dashboard_path"
+        else
+            print_color "$RED" "  FAILED: Dashboard API - npm install failed"
+            print_color "$GRAY" "  Error: $install_output"
+        fi
+        
         results["Dashboard API"]=0
     fi
     cd ..
@@ -219,44 +321,62 @@ if [ $success_count -eq $total_servers ]; then
             
             # Start Dashboard API
             print_color "$CYAN" "\nStarting Dashboard API..."
-            cd dashboard-api
-            node server.js > /dev/null 2>&1 &
-            DASHBOARD_PID=$!
-            cd ..
             
-            sleep 2
-            
-            # Test if dashboard is responding
-            DASHBOARD_READY=false
-            for i in {1..15}; do
-                if curl -s -f http://localhost:3000/api/health > /dev/null 2>&1; then
-                    DASHBOARD_READY=true
-                    break
-                fi
-                sleep 0.5
-            done
-            
-            if [ "$DASHBOARD_READY" = true ]; then
-                print_color "$GREEN" "Dashboard API started successfully!"
-                print_color "$MAGENTA" "\n=== Service URLs ==="
-                print_color "$CYAN" "\nBackend Services:"
-                print_color "$WHITE" "  Security:      http://localhost:8001/docs"
-                print_color "$WHITE" "  Code Gen:      http://localhost:8002/docs"
-                print_color "$WHITE" "  Memory:        http://localhost:8003/docs"
-                print_color "$WHITE" "  Intelligence:  http://localhost:8004/docs"
-                print_color "$WHITE" "  Tokens:        http://localhost:8005/docs"
-                print_color "$WHITE" "  SDLC:          http://localhost:8006/docs"
-                print_color "$WHITE" "  Legacy:        http://localhost:8007/docs"
-                print_color "$WHITE" "  Schema:        http://localhost:8008/docs"
-                print_color "$WHITE" "  Performance:   http://localhost:8009/docs"
-                print_color "$CYAN" "\nManagement Dashboard:"
-                print_color "$GREEN" "  Dashboard:     http://localhost:3000"
-                print_color "$YELLOW" "\nTo stop services:"
-                print_color "$GRAY" "  Dashboard:     kill $DASHBOARD_PID"
-                print_color "$GRAY" "  Backend:       cd services && docker-compose down"
+            # Check if dashboard-api was successfully installed
+            if [ "${results[Dashboard API]}" -eq 0 ]; then
+                print_color "$YELLOW" "Dashboard API not installed (native dependencies failed)"
+                print_color "$CYAN" "\nFALLBACK: Using static HTML dashboard:"
+                static_dashboard_path=$(realpath "dashboard/index.html")
+                print_color "$GREEN" "  file://$static_dashboard_path"
+                print_color "$GRAY" "\nNote: Static dashboard has limited functionality:"
+                print_color "$GRAY" "  ✓ View system overview"
+                print_color "$GRAY" "  ✓ Basic monitoring"
+                print_color "$GRAY" "  ✗ No real-time updates"
+                print_color "$GRAY" "  ✗ No credential management"
+                print_color "$GRAY" "  ✗ No backend integration"
             else
-                print_color "$YELLOW" "WARNING: Dashboard may not have started correctly"
-                print_color "$GRAY" "Check manually at: http://localhost:3000"
+                cd dashboard-api
+                node server.js > /dev/null 2>&1 &
+                DASHBOARD_PID=$!
+                cd ..
+                
+                sleep 2
+                
+                # Test if dashboard is responding
+                DASHBOARD_READY=false
+                for i in {1..15}; do
+                    if curl -s -f http://localhost:3000/api/health > /dev/null 2>&1; then
+                        DASHBOARD_READY=true
+                        break
+                    fi
+                    sleep 0.5
+                done
+                
+                if [ "$DASHBOARD_READY" = true ]; then
+                    print_color "$GREEN" "Dashboard API started successfully!"
+                    print_color "$MAGENTA" "\n=== Service URLs ==="
+                    print_color "$CYAN" "\nBackend Services:"
+                    print_color "$WHITE" "  Security:      http://localhost:8001/docs"
+                    print_color "$WHITE" "  Code Gen:      http://localhost:8002/docs"
+                    print_color "$WHITE" "  Memory:        http://localhost:8003/docs"
+                    print_color "$WHITE" "  Intelligence:  http://localhost:8004/docs"
+                    print_color "$WHITE" "  Tokens:        http://localhost:8005/docs"
+                    print_color "$WHITE" "  SDLC:          http://localhost:8006/docs"
+                    print_color "$WHITE" "  Legacy:        http://localhost:8007/docs"
+                    print_color "$WHITE" "  Schema:        http://localhost:8008/docs"
+                    print_color "$WHITE" "  Performance:   http://localhost:8009/docs"
+                    print_color "$CYAN" "\nManagement Dashboard:"
+                    print_color "$GREEN" "  Dashboard:     http://localhost:3000"
+                    print_color "$YELLOW" "\nTo stop services:"
+                    print_color "$GRAY" "  Dashboard:     kill $DASHBOARD_PID"
+                    print_color "$GRAY" "  Backend:       cd services && docker-compose down"
+                else
+                    print_color "$YELLOW" "WARNING: Dashboard API may not have started correctly"
+                    print_color "$GRAY" "This could be due to native dependency issues"
+                    print_color "$CYAN" "\nFALLBACK: Use the static HTML dashboard:"
+                    static_dashboard_path=$(realpath "dashboard/index.html")
+                    print_color "$GREEN" "  file://$static_dashboard_path"
+                fi
             fi
         else
             print_color "$YELLOW" "\nTo start services later:"

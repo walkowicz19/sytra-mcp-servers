@@ -50,6 +50,70 @@ function Test-Prerequisites {
     Write-ColorOutput "All prerequisites met`n" "Green"
 }
 
+function Test-BuildTools {
+    Write-ColorOutput "`n=== Checking Build Tools ===" "Cyan"
+    
+    $hasBuildTools = $false
+    $buildToolsMessage = ""
+    
+    # Check for node-gyp
+    try {
+        $nodeGypVersion = npm list -g node-gyp --depth=0 2>&1 | Select-String "node-gyp@"
+        if ($nodeGypVersion) {
+            Write-ColorOutput "node-gyp found" "Green"
+            $hasBuildTools = $true
+        }
+    }
+    catch {
+        Write-ColorOutput "node-gyp not found" "Yellow"
+    }
+    
+    # Check for Visual Studio Build Tools on Windows
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere) {
+        $vsInstallation = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if ($vsInstallation) {
+            Write-ColorOutput "Visual Studio Build Tools found" "Green"
+            $hasBuildTools = $true
+        }
+        else {
+            Write-ColorOutput "Visual Studio Build Tools not found" "Yellow"
+            $buildToolsMessage = @"
+
+WARNING: Visual Studio Build Tools not detected.
+The dashboard-api requires native dependencies (better-sqlite3, bcrypt) that need C++ build tools.
+
+To install Visual Studio Build Tools:
+1. Download from: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+2. Run the installer and select "Desktop development with C++"
+3. Or install via command: npm install --global windows-build-tools (requires admin)
+
+Alternative: Use the static HTML dashboard (limited functionality, no backend features)
+"@
+        }
+    }
+    else {
+        Write-ColorOutput "Visual Studio installer not found" "Yellow"
+        $buildToolsMessage = @"
+
+WARNING: Visual Studio Build Tools not detected.
+The dashboard-api requires native dependencies (better-sqlite3, bcrypt) that need C++ build tools.
+
+To install Visual Studio Build Tools:
+1. Download from: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+2. Run the installer and select "Desktop development with C++"
+3. Or install via command: npm install --global windows-build-tools (requires admin)
+
+Alternative: Use the static HTML dashboard (limited functionality, no backend features)
+"@
+    }
+    
+    return @{
+        HasBuildTools = $hasBuildTools
+        Message = $buildToolsMessage
+    }
+}
+
 function Build-Server {
     param(
         [string]$ServerPath,
@@ -173,32 +237,80 @@ foreach ($server in $servers) {
 Write-ColorOutput "`n=== Setting Up Dashboard API ===" "Magenta"
 $totalServers++
 
+# Check build tools before attempting dashboard-api installation
+$buildToolsCheck = Test-BuildTools
+
 if (Test-Path "dashboard-api/node_modules") {
     Write-ColorOutput "Dashboard API dependencies already installed" "Green"
     $results["Dashboard API"] = $true
     $successCount++
 }
 else {
-    Write-ColorOutput "Installing Dashboard API dependencies..." "Cyan"
-    Push-Location "dashboard-api"
-    try {
-        Write-Host "  Installing npm packages..." -ForegroundColor Gray
-        npm install --silent 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            Write-ColorOutput "  SUCCESS: Dashboard API ready" "Green"
-            $results["Dashboard API"] = $true
-            $successCount++
-        }
-        else {
-            throw "npm install failed"
+    if (-not $buildToolsCheck.HasBuildTools) {
+        Write-ColorOutput $buildToolsCheck.Message "Yellow"
+        Write-ColorOutput "`nAttempt to install Dashboard API anyway? (Y/N)" "Cyan"
+        Write-ColorOutput "Note: Installation will likely fail without build tools" "Gray"
+        $response = Read-Host
+        
+        if ($response -ne 'Y' -and $response -ne 'y') {
+            Write-ColorOutput "Skipping Dashboard API installation" "Yellow"
+            Write-ColorOutput "`nFALLBACK: You can use the static HTML dashboard instead:" "Cyan"
+            $staticDashboardPath = Resolve-Path "dashboard/index.html"
+            Write-ColorOutput "  Open in browser: file:///$($staticDashboardPath -replace '\\', '/')" "Green"
+            Write-ColorOutput "`nNote: Static dashboard has limited functionality (no backend features)" "Gray"
+            $results["Dashboard API"] = $false
         }
     }
-    catch {
-        Write-ColorOutput "  FAILED: Dashboard API - $_" "Red"
-        $results["Dashboard API"] = $false
-    }
-    finally {
-        Pop-Location
+    
+    if ($response -eq 'Y' -or $response -eq 'y' -or $buildToolsCheck.HasBuildTools) {
+        Write-ColorOutput "Installing Dashboard API dependencies..." "Cyan"
+        Push-Location "dashboard-api"
+        try {
+            Write-Host "  Installing npm packages (this may take a few minutes)..." -ForegroundColor Gray
+            $installOutput = npm install 2>&1
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-ColorOutput "  SUCCESS: Dashboard API ready" "Green"
+                $results["Dashboard API"] = $true
+                $successCount++
+            }
+            else {
+                # Check for specific build errors
+                $errorOutput = $installOutput | Out-String
+                
+                if ($errorOutput -match "node-gyp|MSBuild|gyp ERR!") {
+                    Write-ColorOutput "  FAILED: Native dependency build error" "Red"
+                    Write-ColorOutput "`nThe dashboard-api requires C++ build tools for native dependencies:" "Yellow"
+                    Write-ColorOutput "  - better-sqlite3 (database)" "Gray"
+                    Write-ColorOutput "  - bcrypt (password hashing)" "Gray"
+                    Write-ColorOutput "`nSOLUTION OPTIONS:" "Cyan"
+                    Write-ColorOutput "  1. Install Visual Studio Build Tools:" "White"
+                    Write-ColorOutput "     https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022" "Gray"
+                    Write-ColorOutput "     Select 'Desktop development with C++' during installation" "Gray"
+                    Write-ColorOutput "`n  2. Use the static HTML dashboard (limited functionality):" "White"
+                    $staticDashboardPath = Resolve-Path "../dashboard/index.html"
+                    Write-ColorOutput "     file:///$($staticDashboardPath -replace '\\', '/')" "Green"
+                    Write-ColorOutput "`n  3. Install via npm (requires admin PowerShell):" "White"
+                    Write-ColorOutput "     npm install --global windows-build-tools" "Gray"
+                }
+                else {
+                    Write-ColorOutput "  FAILED: Dashboard API - npm install failed" "Red"
+                    Write-ColorOutput "  Error: $errorOutput" "Gray"
+                }
+                
+                $results["Dashboard API"] = $false
+            }
+        }
+        catch {
+            Write-ColorOutput "  FAILED: Dashboard API - $_" "Red"
+            Write-ColorOutput "`nFALLBACK: Use the static HTML dashboard:" "Cyan"
+            $staticDashboardPath = Resolve-Path "../dashboard/index.html"
+            Write-ColorOutput "  file:///$($staticDashboardPath -replace '\\', '/')" "Green"
+            $results["Dashboard API"] = $false
+        }
+        finally {
+            Pop-Location
+        }
     }
 }
 
@@ -271,52 +383,74 @@ if ($successCount -eq $totalServers) {
                 
                 # Start Dashboard API
                 Write-ColorOutput "`nStarting Dashboard API..." "Cyan"
-                try {
-                    $dashboardProcess = Start-Process -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "dashboard-api" -WindowStyle Hidden -PassThru
-                    Start-Sleep -Seconds 2
-                    
-                    # Test if dashboard is responding
-                    $maxAttempts = 15
-                    $dashboardReady = $false
-                    for ($i = 1; $i -le $maxAttempts; $i++) {
-                        try {
-                            $response = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET -TimeoutSec 1 -UseBasicParsing -ErrorAction SilentlyContinue
-                            if ($response.StatusCode -eq 200) {
-                                $dashboardReady = $true
-                                break
+                
+                # Check if dashboard-api was successfully installed
+                if (-not $results["Dashboard API"]) {
+                    Write-ColorOutput "Dashboard API not installed (native dependencies failed)" "Yellow"
+                    Write-ColorOutput "`nFALLBACK: Using static HTML dashboard:" "Cyan"
+                    $staticDashboardPath = Resolve-Path "dashboard/index.html"
+                    Write-ColorOutput "  file:///$($staticDashboardPath -replace '\\', '/')" "Green"
+                    Write-ColorOutput "`nNote: Static dashboard has limited functionality:" "Gray"
+                    Write-ColorOutput "  ✓ View system overview" "Gray"
+                    Write-ColorOutput "  ✓ Basic monitoring" "Gray"
+                    Write-ColorOutput "  ✗ No real-time updates" "Gray"
+                    Write-ColorOutput "  ✗ No credential management" "Gray"
+                    Write-ColorOutput "  ✗ No backend integration" "Gray"
+                }
+                else {
+                    try {
+                        $dashboardProcess = Start-Process -FilePath "node" -ArgumentList "server.js" -WorkingDirectory "dashboard-api" -WindowStyle Hidden -PassThru
+                        Start-Sleep -Seconds 2
+                        
+                        # Test if dashboard is responding
+                        $maxAttempts = 15
+                        $dashboardReady = $false
+                        for ($i = 1; $i -le $maxAttempts; $i++) {
+                            try {
+                                $response = Invoke-WebRequest -Uri "http://localhost:3000/api/health" -Method GET -TimeoutSec 1 -UseBasicParsing -ErrorAction SilentlyContinue
+                                if ($response.StatusCode -eq 200) {
+                                    $dashboardReady = $true
+                                    break
+                                }
+                            }
+                            catch {
+                                Start-Sleep -Milliseconds 500
                             }
                         }
-                        catch {
-                            Start-Sleep -Milliseconds 500
+                        
+                        if ($dashboardReady) {
+                            Write-ColorOutput "Dashboard API started successfully!" "Green"
+                            Write-ColorOutput "`n=== Service URLs ===" "Magenta"
+                            Write-ColorOutput "`nBackend Services:" "Cyan"
+                            Write-ColorOutput "  Security:      http://localhost:8001/docs" "White"
+                            Write-ColorOutput "  Code Gen:      http://localhost:8002/docs" "White"
+                            Write-ColorOutput "  Memory:        http://localhost:8003/docs" "White"
+                            Write-ColorOutput "  Intelligence:  http://localhost:8004/docs" "White"
+                            Write-ColorOutput "  Tokens:        http://localhost:8005/docs" "White"
+                            Write-ColorOutput "  SDLC:          http://localhost:8006/docs" "White"
+                            Write-ColorOutput "  Legacy:        http://localhost:8007/docs" "White"
+                            Write-ColorOutput "  Schema:        http://localhost:8008/docs" "White"
+                            Write-ColorOutput "  Performance:   http://localhost:8009/docs" "White"
+                            Write-ColorOutput "`nManagement Dashboard:" "Cyan"
+                            Write-ColorOutput "  Dashboard:     http://localhost:3000" "Green"
+                            Write-ColorOutput "`nTo stop services:" "Yellow"
+                            Write-ColorOutput "  Dashboard:     Stop the node process (PID: $($dashboardProcess.Id))" "Gray"
+                            Write-ColorOutput "  Backend:       cd services && docker-compose down" "Gray"
+                        }
+                        else {
+                            Write-ColorOutput "WARNING: Dashboard API may not have started correctly" "Yellow"
+                            Write-ColorOutput "This could be due to native dependency issues" "Gray"
+                            Write-ColorOutput "`nFALLBACK: Use the static HTML dashboard:" "Cyan"
+                            $staticDashboardPath = Resolve-Path "dashboard/index.html"
+                            Write-ColorOutput "  file:///$($staticDashboardPath -replace '\\', '/')" "Green"
                         }
                     }
-                    
-                    if ($dashboardReady) {
-                        Write-ColorOutput "Dashboard API started successfully!" "Green"
-                        Write-ColorOutput "`n=== Service URLs ===" "Magenta"
-                        Write-ColorOutput "`nBackend Services:" "Cyan"
-                        Write-ColorOutput "  Security:      http://localhost:8001/docs" "White"
-                        Write-ColorOutput "  Code Gen:      http://localhost:8002/docs" "White"
-                        Write-ColorOutput "  Memory:        http://localhost:8003/docs" "White"
-                        Write-ColorOutput "  Intelligence:  http://localhost:8004/docs" "White"
-                        Write-ColorOutput "  Tokens:        http://localhost:8005/docs" "White"
-                        Write-ColorOutput "  SDLC:          http://localhost:8006/docs" "White"
-                        Write-ColorOutput "  Legacy:        http://localhost:8007/docs" "White"
-                        Write-ColorOutput "  Schema:        http://localhost:8008/docs" "White"
-                        Write-ColorOutput "  Performance:   http://localhost:8009/docs" "White"
-                        Write-ColorOutput "`nManagement Dashboard:" "Cyan"
-                        Write-ColorOutput "  Dashboard:     http://localhost:3000" "Green"
-                        Write-ColorOutput "`nTo stop services:" "Yellow"
-                        Write-ColorOutput "  Dashboard:     Stop the node process (PID: $($dashboardProcess.Id))" "Gray"
-                        Write-ColorOutput "  Backend:       cd services && docker-compose down" "Gray"
+                    catch {
+                        Write-ColorOutput "Failed to start Dashboard API: $_" "Red"
+                        Write-ColorOutput "`nFALLBACK: Use the static HTML dashboard:" "Cyan"
+                        $staticDashboardPath = Resolve-Path "dashboard/index.html"
+                        Write-ColorOutput "  file:///$($staticDashboardPath -replace '\\', '/')" "Green"
                     }
-                    else {
-                        Write-ColorOutput "WARNING: Dashboard may not have started correctly" "Yellow"
-                        Write-ColorOutput "Check manually at: http://localhost:3000" "Gray"
-                    }
-                }
-                catch {
-                    Write-ColorOutput "Failed to start Dashboard API: $_" "Red"
                 }
             }
             else {

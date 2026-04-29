@@ -614,6 +614,37 @@ Sytra includes a comprehensive web dashboard for monitoring and managing the MCP
 
 See [`dashboard/README.md`](dashboard/README.md) for detailed documentation.
 
+### Dashboard Troubleshooting
+
+#### Native Dependency Build Failures
+
+If the dashboard-api fails to install due to native dependency errors (better-sqlite3, bcrypt):
+
+**Symptoms:**
+```
+gyp ERR! build error
+node-gyp rebuild failed
+MSBuild.exe not found
+```
+
+**Solution 1: Install Build Tools**
+
+- **Windows**: Install Visual Studio Build Tools with "Desktop development with C++"
+  - Download: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+- **Linux**: `sudo apt-get install build-essential` (Ubuntu/Debian)
+- **macOS**: `xcode-select --install`
+
+**Solution 2: Use Static Dashboard (Fallback)**
+
+Open `dashboard/index.html` directly in your browser:
+```
+file:///path/to/sytra-mcp/dashboard/index.html
+```
+
+**Note:** Static dashboard has limited functionality (no backend features, real-time updates, or data persistence).
+
+See [`dashboard/README.md`](dashboard/README.md) for complete troubleshooting guide.
+
 ---
 
 ## 📚 Documentation

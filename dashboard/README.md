@@ -2,6 +2,72 @@
 
 A comprehensive, modern web dashboard for managing and monitoring the Sytra MCP (Model Context Protocol) system.
 
+## 🚀 Quick Start
+
+### Option 1: Full Dashboard with Backend (Recommended)
+
+The full dashboard requires the dashboard-api backend server with native dependencies.
+
+**Prerequisites:**
+- Node.js 16+ and npm
+- **C++ Build Tools** (required for native dependencies):
+  - **Windows**: Visual Studio Build Tools with "Desktop development with C++"
+  - **Linux**: build-essential package (`sudo apt-get install build-essential`)
+  - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
+
+**Installation:**
+```bash
+cd dashboard-api
+npm install
+npm start
+```
+
+Then open your browser to `http://localhost:3000`
+
+### Option 2: Static HTML Dashboard (Fallback)
+
+If you encounter native dependency build errors, you can use the static HTML dashboard as a fallback.
+
+**No installation required!** Simply open the HTML file directly in your browser:
+
+**Windows:**
+```
+file:///C:/Users/YourUsername/path/to/sytra-mcp/dashboard/index.html
+```
+
+**Linux/macOS:**
+```
+file:///home/username/path/to/sytra-mcp/dashboard/index.html
+```
+
+Or double-click `dashboard/index.html` in your file explorer.
+
+#### Static Dashboard Limitations
+
+The static dashboard provides basic functionality without backend integration:
+
+✅ **Available Features:**
+- View system overview and layout
+- Browse UI components
+- See dashboard design and structure
+- Access documentation
+
+❌ **Not Available (Requires Backend):**
+- Real-time monitoring and updates
+- Token usage tracking and charts
+- Credential management
+- Memory graph visualization
+- Log streaming
+- Security management
+- MCP server health monitoring
+- WebSocket real-time updates
+
+**When to use static dashboard:**
+- Build tools are not available
+- Native dependency installation fails
+- Quick preview of dashboard UI
+- Development/testing without backend
+
 ## Features
 
 ### 🎨 Design & UI Improvements
@@ -315,15 +381,57 @@ dashboard-api/
 
 ## Troubleshooting
 
+### Native Dependency Build Errors
+
+**Problem:** Dashboard API installation fails with errors like:
+```
+gyp ERR! build error
+node-gyp rebuild failed
+MSBuild.exe not found
+```
+
+**Cause:** The dashboard-api requires native dependencies (better-sqlite3, bcrypt) that need C++ build tools.
+
+**Solutions:**
+
+1. **Install Build Tools:**
+   
+   **Windows:**
+   - Download Visual Studio Build Tools: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+   - Run installer and select "Desktop development with C++"
+   - Or run: `npm install --global windows-build-tools` (requires admin PowerShell)
+   
+   **Linux (Ubuntu/Debian):**
+   ```bash
+   sudo apt-get install build-essential
+   ```
+   
+   **Linux (Fedora/RHEL):**
+   ```bash
+   sudo dnf groupinstall 'Development Tools'
+   ```
+   
+   **macOS:**
+   ```bash
+   xcode-select --install
+   ```
+
+2. **Use Static Dashboard (Fallback):**
+   - Open `dashboard/index.html` directly in your browser
+   - No backend features, but UI is accessible
+   - See "Option 2: Static HTML Dashboard" above
+
 ### Dashboard won't load
 - Ensure the API server is running on port 3000
 - Check browser console for errors
 - Verify no other service is using port 3000
+- If native dependencies failed, use static HTML dashboard
 
 ### WebSocket connection fails
 - Check firewall settings
 - Ensure WebSocket support in browser
 - Verify server is running
+- Try static dashboard if backend is unavailable
 
 ### MCP servers show as unhealthy
 - Ensure all MCP backend services are running (ports 8001-8009)
@@ -332,8 +440,16 @@ dashboard-api/
 
 ### Database errors
 - Check write permissions in `dashboard-api/db/` directory
-- Ensure SQLite is properly installed
+- Ensure SQLite is properly installed (requires build tools)
 - Delete `dashboard.db` to reset (will lose data)
+- If SQLite fails to install, use static dashboard
+
+### Dashboard API won't start after installation
+- Check if native dependencies installed correctly
+- Look for error messages mentioning better-sqlite3 or bcrypt
+- Verify build tools are installed
+- Try reinstalling: `cd dashboard-api && rm -rf node_modules && npm install`
+- Use static dashboard as fallback
 
 ## Performance
 
